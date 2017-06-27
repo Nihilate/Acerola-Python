@@ -122,9 +122,7 @@ class Anilist:
                                         title_japanese=entry['title_japanese'],
                                         synonyms=set(entry['synonyms']) if entry['synonyms'] else set(),
                                         genres=set(entry['genres']) if entry['genres'] else set(),
-                                        episode_count=(int(entry['total_episodes'])
-                                                       if int(entry['total_episodes']) > 0 else None)
-                                                       if isinstance(entry['total_episodes'], int) else None,
+                                        episode_count=(int(entry['total_episodes']) if int(entry['total_episodes']) > 0 else None),
                                         status=get_status(STATUS_MAPPING, entry['airing_status']),
                                         type=get_type(TYPE_MAPPING, entry['type']),
                                         description=entry['description'],
@@ -148,12 +146,8 @@ class Anilist:
                               title_japanese=entry['title_japanese'],
                               synonyms=set(entry['synonyms']) if entry['synonyms'] else set(),
                               genres=set(entry['genres']) if entry['genres'] else set(),
-                              chapter_count=(int(entry['total_chapters'])
-                                             if int(entry['total_chapters']) > 0 else None)
-                                             if isinstance(entry['total_chapters'], int) else None,
-                              volume_count=(int(entry['total_volumes'])
-                                            if int(entry['total_volumes']) > 0 else None)
-                                            if isinstance(entry['total_volumes'], int) else None,
+                              chapter_count=(int(entry['total_chapters']) if int(entry['total_chapters']) > 0 else None),
+                              volume_count=(int(entry['total_volumes']) if int(entry['total_volumes']) > 0 else None),
                               status=get_status(STATUS_MAPPING, entry['publishing_status']),
                               type=get_type(TYPE_MAPPING, entry['type']),
                               description=entry['description'],
@@ -179,12 +173,8 @@ class Anilist:
                                 title_japanese=entry['title_japanese'],
                                 synonyms=set(entry['synonyms']) if entry['synonyms'] else set(),
                                 genres=set(entry['genres']) if entry['genres'] else set(),
-                                chapter_count=(int(entry['total_chapters'])
-                                               if int(entry['total_chapters']) > 0 else None)
-                                               if isinstance(entry['total_chapters'], int) else None,
-                                volume_count=(int(entry['total_volumes'])
-                                              if int(entry['total_volumes']) > 0 else None)
-                                              if isinstance(entry['total_volumes'], int) else None,
+                                chapter_count=(int(entry['total_chapters']) if int(entry['total_chapters']) > 0 else None),
+                                volume_count=(int(entry['total_volumes']) if int(entry['total_volumes']) > 0 else None),
                                 status=get_status(STATUS_MAPPING, entry['publishing_status']),
                                 type=get_type(TYPE_MAPPING, entry['type']),
                                 description=entry['description'],

@@ -75,8 +75,7 @@ class Kitsu:
                                         title_english=entry['attributes']['titles']['en'] if 'en' in entry['attributes']['titles'] else None,
                                         title_japanese=entry['attributes']['titles']['ja_jp'] if 'ja_jp' in entry['attributes']['titles'] else None,
                                         synonyms=set(entry['attributes']['abbreviatedTitles']) if entry['attributes']['abbreviatedTitles'] else set(),
-                                        episode_count=(int(entry['attributes']['episodeCount']) if int(entry['attributes']['episodeCount']) > 0 else None)
-                                            if isinstance(entry['attributes']['episodeCount'], int) else None,
+                                        episode_count=(int(entry['attributes']['episodeCount']) if int(entry['attributes']['episodeCount']) > 0 else None),
                                         type=get_type(TYPE_MAPPING, entry['attributes']['showType']),
                                         description=entry['attributes']['synopsis'],
                                         nsfw=entry['attributes']['nsfw']))
