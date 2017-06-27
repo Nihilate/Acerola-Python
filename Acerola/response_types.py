@@ -18,6 +18,7 @@ class Anime:
         self.description = kwargs.get('description')
         self.source = kwargs.get('source')
         self.nsfw = kwargs.get('nsfw')
+        self.score = kwargs.get('score')
 
     def __str__(self):
         return str(self.__dict__)

@@ -97,7 +97,8 @@ class Mal:
                                                        if isinstance(entry.find('episodes').text, int) else None,
                                         type=get_type(TYPE_MAPPING, entry.find('type').text),
                                         status=get_status(STATUS_MAPPING, entry.find('status').text),
-                                        description=entry.find('synopsis').text))
+                                        description=entry.find('synopsis').text,
+                                        score=float(entry.find('score').text)))
             except AttributeError as e:
                 print(e)
                 # todo - better logging
