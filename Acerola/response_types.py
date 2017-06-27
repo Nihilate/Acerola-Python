@@ -18,6 +18,7 @@ class Anime:
         self.description = kwargs.get('description')
         self.source = kwargs.get('source')
         self.nsfw = kwargs.get('nsfw')
+        self.score = kwargs.get('score')
 
     def __str__(self):
         return str(self.__dict__)
@@ -47,7 +48,8 @@ class Anime:
                      type=next((result.type for result in just_the_results if result.type), None),
                      description=next((result.description for result in just_the_results if result.description), None),
                      source=next((result.source for result in just_the_results if result.source), None),
-                     nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None))
+                     nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None),
+                     score=next((result.score for result in just_the_results if result.score is not None), None))
 
 
 class Manga:
@@ -69,6 +71,7 @@ class Manga:
         self.type = kwargs.get('type')
         self.description = kwargs.get('description')
         self.nsfw = kwargs.get('nsfw')
+        self.score = kwargs.get('score')
 
     def __str__(self):
         return str(self.__dict__)
@@ -98,7 +101,8 @@ class Manga:
                      status=next((result.status for result in just_the_results if result.status), None),
                      type=next((result.type for result in just_the_results if result.type), None),
                      description=next((result.description for result in just_the_results if result.description), None),
-                     nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None))
+                     nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None),
+                     score=next((result.score for result in just_the_results if result.score is not None), None))
 
 
 class LightNovel:
@@ -120,6 +124,7 @@ class LightNovel:
         self.type = kwargs.get('type')
         self.description = kwargs.get('description')
         self.nsfw = kwargs.get('nsfw')
+        self.score = kwargs.get('score')
 
     def __str__(self):
         return str(self.__dict__)
@@ -149,4 +154,5 @@ class LightNovel:
                           status=next((result.status for result in just_the_results if result.status), None),
                           type=next((result.type for result in just_the_results if result.type), None),
                           description=next((result.description for result in just_the_results if result.description), None),
-                          nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None))
+                          nsfw=next((result.nsfw for result in just_the_results if result.nsfw is not None), None),
+                          score=next((result.score for result in just_the_results if result.score is not None), None))
