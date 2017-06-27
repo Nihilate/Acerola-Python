@@ -90,8 +90,7 @@ class Mal:
                                         urls={DataSource.MAL: 'http://myanimelist.net/anime/' + str(entry.find('id').text)},
                                         title_english=entry.find('english').text,
                                         title_romaji=entry.find('title').text,
-                                        synonyms=set(entry.find('synonyms').text.split(";"))
-                                            if entry.find('synonyms').text else set(),
+                                        synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),
                                         episode_count=(int(entry.find('episodes').text)
                                                        if int(entry.find('episodes').text) > 0 else None)
                                                        if isinstance(entry.find('episodes').text, int) else None,
@@ -121,14 +120,9 @@ class Mal:
                               urls={DataSource.MAL: 'http://myanimelist.net/manga/' + str(entry.find('id').text)},
                               title_english=entry.find('english').text,
                               title_romaji=entry.find('title').text,
-                              synonyms=set(entry.find('synonyms').text.split(";"))
-                                if entry.find('synonyms').text else set(),
-                              chapter_count=(int(entry.find('chapters').text)
-                                             if int(entry.find('chapters').text) > 0 else None)
-                              if isinstance(entry.find('chapters').text, int) else None,
-                              volume_count=(int(entry.find('volumes').text)
-                                            if int(entry.find('volumes').text) > 0 else None)
-                              if isinstance(entry.find('volumes').text, int) else None,
+                              synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),
+                              chapter_count=int(entry.find('chapters').text) if int(entry.find('chapters').text) > 0 else None,
++                             volume_count=int(entry.find('volumes').text) if int(entry.find('volumes').text) > 0 else None,
                               type=get_type(TYPE_MAPPING, entry.find('type').text),
                               status=get_status(STATUS_MAPPING, entry.find('status').text),
                               description=entry.find('synopsis').text,
@@ -159,14 +153,9 @@ class Mal:
                                 urls={DataSource.MAL: 'http://myanimelist.net/manga/' + str(entry.find('id').text)},
                                 title_english=entry.find('english').text,
                                 title_romaji=entry.find('title').text,
-                                synonyms=set(entry.find('synonyms').text.split(";"))
-                                    if entry.find('synonyms').text else set(),
-                                chapter_count=(int(entry.find('chapters').text)
-                                               if int(entry.find('chapters').text) > 0 else None)
-                                               if isinstance(entry.find('chapters').text, int) else None,
-                                volume_count=(int(entry.find('volumes').text)
-                                              if int(entry.find('volumes').text) > 0 else None)
-                                              if isinstance(entry.find('volumes').text, int) else None,
+                                synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),
+                                chapter_count=int(entry.find('chapters').text) if int(entry.find('chapters').text) > 0 else None,
++                               volume_count=int(entry.find('volumes').text) if int(entry.find('volumes').text) > 0 else None,
                                 type=get_type(TYPE_MAPPING, entry.find('type').text),
                                 status=get_status(STATUS_MAPPING, entry.find('status').text),
                                 description=entry.find('synopsis').text,
