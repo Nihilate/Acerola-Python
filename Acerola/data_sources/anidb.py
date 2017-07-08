@@ -13,11 +13,12 @@ BASE_URL = 'http://anisearch.outrance.pl/?task=search&query='
 
 class AniDB:
     def __init__(self, config):
+        self.source_type = DataSource.ANIDB
         self.timeout = config['Timeout']
         self.logger = logging.getLogger('AcerolaLogger')
         self.session = requests.Session()
 
-    def get_anime(self, search_term) -> List[Anime]:
+    def search_anime(self, search_term) -> List[Anime]:
         try:
             result = self.session.get(BASE_URL + search_term, timeout=int(self.timeout))
 

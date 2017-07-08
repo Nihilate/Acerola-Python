@@ -13,6 +13,7 @@ BASE_URL = 'https://mangaupdates.com/series.html'
 
 class MangaUpdates:
     def __init__(self, config):
+        self.source_type = DataSource.MANGAUPDATES
         self.timeout = config['Timeout']
         self.logger = logging.getLogger('AcerolaLogger')
         self.session = requests.Session()
@@ -38,10 +39,10 @@ class MangaUpdates:
             self.session.close()
 
     # The irony is that get_manga and get_light_novel effectively do the same thing - there's no way to tell the difference from the search page :(
-    def get_manga(self, search_term) -> List[Manga]:
+    def search_manga(self, search_term) -> List[Manga]:
         return self.get_thing(search_term, self.parse_manga)
 
-    def get_light_novel(self, search_term) -> List[LightNovel]:
+    def search_light_novel(self, search_term) -> List[LightNovel]:
         return self.get_thing(search_term, self.parse_light_novel)
 
     @staticmethod

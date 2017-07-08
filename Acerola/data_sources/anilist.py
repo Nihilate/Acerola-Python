@@ -49,6 +49,7 @@ def retry_if_access_token_needs_refreshing(exception):
 
 class Anilist:
     def __init__(self, config):
+        self.source_type = DataSource.ANILIST
         self.client_id = config['ClientId']
         self.client_secret = config['ClientSecret']
         self.timeout = config['Timeout']
@@ -67,7 +68,7 @@ class Anilist:
         self.access_token = token_result.json()['access_token']
 
     @retry(retry_on_exception=retry_if_access_token_needs_refreshing, stop_max_attempt_number=2)
-    def get_items(self, search_term, endpoint, parser):
+    def search_items(self, search_term, endpoint, parser):
         try:
             sanitised_search_term = self.sanitise_search_term(search_term)
 
@@ -100,13 +101,13 @@ class Anilist:
         finally:
             self.session.close()
 
-    def get_anime(self, search_term):
+    def search_anime(self, search_term):
         return self.get_items(search_term, ANIME_ENDPOINT, self.parse_anime)
 
-    def get_manga(self, search_term):
+    def search_manga(self, search_term):
         return self.get_items(search_term, MANGA_ENDPOINT, self.parse_manga)
 
-    def get_light_novel(self, search_term):
+    def search_light_novel(self, search_term):
         return self.get_items(search_term, MANGA_ENDPOINT, self.parse_light_novel)
 
     @staticmethod

@@ -28,6 +28,7 @@ TYPE_MAPPING = (['TV', Type.TV],
 
 class Kitsu:
     def __init__(self, config):
+        self.source_type = DataSource.KITSU
         self.session = requests.Session()
         self.session.headers = {'Accept': 'application/vnd.api+json', 'Content-Type': 'application/vnd.api+json'}
 
@@ -54,13 +55,13 @@ class Kitsu:
         finally:
             self.session.close()
 
-    def get_anime(self, search_term):
+    def search_anime(self, search_term):
         return self.get_items(search_term, ANIME_FILTER, self.parse_anime)
 
-    def get_manga(self, search_term):
+    def search_manga(self, search_term):
         return self.get_items(search_term, MANGA_FILTER, self.parse_manga)
 
-    def get_light_novel(self, search_term):
+    def search_light_novel(self, search_term):
         return self.get_items(search_term, MANGA_FILTER, self.parse_light_novel)
 
     @staticmethod

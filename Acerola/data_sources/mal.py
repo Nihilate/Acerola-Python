@@ -38,6 +38,7 @@ STATUS_MAPPING = (['Not yet aired', Status.UPCOMING],
 class Mal:
     # todo better handling of errors inside "get items" call (include requests.timeout)
     def __init__(self, config):
+        self.source_type = DataSource.MAL
         self.config = config
 
         self.logger = logging.getLogger('AcerolaLogger')
@@ -66,13 +67,13 @@ class Mal:
             self.session.close()
 
     # Get normally
-    def get_anime(self, search_term):
+    def search_anime(self, search_term):
         return self.get_items(search_term, ANIME_ENDPOINT, self.parse_anime)
 
-    def get_manga(self, search_term):
+    def search_manga(self, search_term):
         return self.get_items(search_term, MANGA_ENDPOINT, self.parse_manga)
 
-    def get_light_novel(self, search_term):
+    def search_light_novel(self, search_term):
         return self.get_items(search_term, MANGA_ENDPOINT, self.parse_light_novel)
 
     @staticmethod
