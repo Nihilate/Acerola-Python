@@ -1,14 +1,13 @@
-from ..errors import ResponseException
 from ..enums import Type, DataSource
 from ..util import get_type
-
 from ..response_types import Anime, Manga, LightNovel
+from ..errors import NoResultsFound, DataSourceTimeoutError, DataSourceUnavailableError, AcerolaError
 
 import requests
 import logging
 
 AUTH_URL = 'https://kitsu.io/api/oauth/'
-BASE_API = 'https://kitsu.io/api/edge/'
+BASE_URL = 'https://kitsu.io/api/edge/'
 ANIME_FILTER = 'anime?filter[text]='
 MANGA_FILTER = 'manga?filter[text]='
 
@@ -26,9 +25,11 @@ TYPE_MAPPING = (['TV', Type.TV],
                 ['manhua', Type.MANHUA])
 
 
+# todo add status, genres, etc
 class Kitsu:
+    source_type = DataSource.KITSU
+
     def __init__(self, config):
-        self.source_type = DataSource.KITSU
         self.session = requests.Session()
         self.session.headers = {'Accept': 'application/vnd.api+json', 'Content-Type': 'application/vnd.api+json'}
 
@@ -36,33 +37,37 @@ class Kitsu:
 
         self.config = config
 
-    def get_items(self, search_term, endpoint, parser):
+    # todo logging decorator?
+    def kitsu_search(self, endpoint, search_term, parser):
         try:
-            result = self.session.get(BASE_API + endpoint + search_term, timeout=int(self.config['Timeout']))
+            response = self.session.get(BASE_URL + endpoint + search_term, timeout=int(self.config['Timeout']))
+            response.raise_for_status()
 
-            # todo - better message, give status code in exception
-            if result.status_code != 200:
-                raise ResponseException('Failed to find results for: ' + search_term)
+            results = parser(response.json()['data'])
 
-            # todo - check if there are no results? just raise an exception?
+            if not results:
+                raise NoResultsFound(Kitsu.source_type, search_term)
 
-            parsed_results = parser(result.json()['data'])
-
-            return parsed_results
+            return results
+        except NoResultsFound:
+            raise
+        except requests.exceptions.Timeout:
+            raise DataSourceTimeoutError(Kitsu.source_type)
+        except requests.exceptions.RequestException:
+            raise DataSourceUnavailableError(Kitsu.source_type)
         except Exception as e:
-            self.logger.error('KIT Exception: ' + str(e))
-            return []
+            raise AcerolaError(e)
         finally:
             self.session.close()
 
     def search_anime(self, search_term):
-        return self.get_items(search_term, ANIME_FILTER, self.parse_anime)
+        return self.kitsu_search(ANIME_FILTER, search_term, self.parse_anime)
 
     def search_manga(self, search_term):
-        return self.get_items(search_term, MANGA_FILTER, self.parse_manga)
+        return self.kitsu_search(MANGA_FILTER, search_term, self.parse_manga)
 
     def search_light_novel(self, search_term):
-        return self.get_items(search_term, MANGA_FILTER, self.parse_light_novel)
+        return self.kitsu_search(MANGA_FILTER, search_term, self.parse_light_novel)
 
     @staticmethod
     def parse_anime(results):
@@ -71,7 +76,7 @@ class Kitsu:
         for entry in results:
             try:
                 anime_list.append(Anime(id=entry['id'],
-                                        urls={DataSource.KITSU: 'https://kitsu.io/anime/' + entry['id']},
+                                        url='https://kitsu.io/anime/' + entry['id'],
                                         title_romaji=entry['attributes']['titles']['en_jp'] if 'en_jp' in entry['attributes']['titles'] else None,
                                         title_english=entry['attributes']['titles']['en'] if 'en' in entry['attributes']['titles'] else None,
                                         title_japanese=entry['attributes']['titles']['ja_jp'] if 'ja_jp' in entry['attributes']['titles'] else None,
@@ -93,10 +98,12 @@ class Kitsu:
             try:
 
                 manga = Manga(id=entry['id'],
-                              urls={DataSource.KITSU: 'https://kitsu.io/manga/' + entry['id']},
+                              url='https://kitsu.io/manga/' + entry['id'],
                               title_romaji=entry['attributes']['titles']['en_jp'] if 'en_jp' in entry['attributes']['titles'] else None,
                               title_english=entry['attributes']['titles']['en'] if 'en' in entry['attributes']['titles'] else None,
                               synonyms=set(entry['attributes']['abbreviatedTitles']) if entry['attributes']['abbreviatedTitles'] else set(),
+                              volume_count=(int(entry['attributes']['volumeCount']) if entry['attributes']['volumeCount'] else None),
+                              chapter_count=(int(entry['attributes']['chapterCount']) if entry['attributes']['chapterCount'] else None),
                               type=get_type(TYPE_MAPPING, entry['attributes']['mangaType']),
                               description=entry['attributes']['synopsis'])
 
@@ -115,10 +122,12 @@ class Kitsu:
             try:
 
                 ln = LightNovel(id=entry['id'],
-                                urls={DataSource.KITSU: 'https://kitsu.io/manga/' + entry['id']},
+                                url='https://kitsu.io/manga/' + entry['id'],
                                 title_romaji=entry['attributes']['titles']['en_jp'] if 'en_jp' in entry['attributes']['titles'] else None,
                                 title_english=entry['attributes']['titles']['en'] if 'en' in entry['attributes']['titles'] else None,
                                 synonyms=set(entry['attributes']['abbreviatedTitles']) if entry['attributes']['abbreviatedTitles'] else set(),
+                                volume_count=(int(entry['attributes']['volumeCount']) if entry['attributes']['volumeCount'] else None),
+                                chapter_count=(int(entry['attributes']['chapterCount']) if entry['attributes']['chapterCount'] else None),
                                 type=get_type(TYPE_MAPPING, entry['attributes']['mangaType']),
                                 description=entry['attributes']['synopsis'])
 

@@ -3,7 +3,7 @@ import logging
 
 from pyquery import PyQuery
 
-from ..errors import ResponseException
+from ..errors import NoResultsFound, DataSourceTimeoutError, DataSourceUnavailableError, AcerolaError
 from ..enums import DataSource, Type
 
 from ..response_types import Anime, Manga, LightNovel
@@ -14,45 +14,52 @@ MANGA_ENDPOINT = '/manga/all?name='
 
 
 class AnimePlanet:
+    source_type = DataSource.ANIMEPLANET
+
     def __init__(self, config):
-        self.source_type = DataSource.ANIMEPLANET
-        self.timeout = config['Timeout']
+        self.timeout = int(config['Timeout'])
         self.logger = logging.getLogger('AcerolaLogger')
         self.session = requests.Session()
 
-    def get_items(self, search_term, endpoint, parser):
+    # todo logging decorator?
+    def ap_search(self, endpoint, search_term, parser):
         try:
-            result = self.session.get(BASE_URL + endpoint + search_term, timeout=int(self.timeout))
+            response = self.session.get(BASE_URL + endpoint + search_term, timeout=self.timeout)
+            response.raise_for_status()
 
-            if result.status_code != 200:
-                raise ResponseException('Failed to find results for: ' + search_term)
+            xml_response = PyQuery(response.text)
+            error_message = xml_response.find('.error').text().lower()
 
-            pq_result = PyQuery(result.text)
+            if 'no results' in error_message:
+                raise NoResultsFound(AnimePlanet.source_type, search_term)
 
-            blah = pq_result.find('.error').text().lower()
+            results = parser(xml_response)
 
-            if 'no results' in blah:
-                return []
+            if not results:
+                raise NoResultsFound(AnimePlanet.source_type, search_term)
 
-            parsed_results = parser(pq_result)
-
-            return parsed_results
+            return results
+        except NoResultsFound:
+            raise
+        except requests.exceptions.Timeout:
+            raise DataSourceTimeoutError(AnimePlanet.source_type)
+        except requests.exceptions.RequestException:
+            raise DataSourceUnavailableError(AnimePlanet.source_type)
         except Exception as e:
-            self.logger.error('AP error: ' + str(e))
-            return []
+            raise AcerolaError(e)
         finally:
             self.session.close()
 
     def search_anime(self, search_term):
-        return self.get_items(search_term, ANIME_ENDPOINT, self.parse_anime)
+        return self.ap_search(ANIME_ENDPOINT, search_term, self.parse_anime)
 
     def search_manga(self, search_term):
-        return self.get_items(search_term, MANGA_ENDPOINT, self.parse_manga)
+        return self.ap_search(MANGA_ENDPOINT, search_term, self.parse_manga)
 
     def search_light_novel(self, search_term):
-        return self.get_items(search_term, MANGA_ENDPOINT, self.parse_light_novel)
+        return self.ap_search(MANGA_ENDPOINT, search_term, self.parse_light_novel)
 
-    # TODO Grab genres as well as build a "recommend me a thing" functionality
+    # TODO Grab genres as well as build a "recommend me a thing" functionality, add synonyms
     @staticmethod
     def parse_anime(results):
         anime_list = []
@@ -62,15 +69,15 @@ class AnimePlanet:
             for entry in results.find('.card.pure-1-6'):
                 try:
                     anime_list.append(Anime(title_english=PyQuery(entry).find('h4').text(),
-                                            urls={DataSource.ANIMEPLANET: BASE_URL + PyQuery(entry).find('a').attr('href')}))
+                                            url=BASE_URL + PyQuery(entry).find('a').attr('href')))
                 except AttributeError:
                     pass  # todo - logging here
         else:
             try:
                 anime = Anime(title_english=results.find('h1[itemprop="name"]').text(),
-                              urls={DataSource.ANIMEPLANET: results.find("meta[property='og:url']").attr('content')})
+                              url=results.find("meta[property='og:url']").attr('content'))
 
-                if 'anime' in [url for url in anime.urls.items()]:
+                if 'anime' in anime.url:
                     anime_list.append(anime)
             except AttributeError:
                 pass  # todo - logging here
@@ -86,7 +93,7 @@ class AnimePlanet:
             for entry in results.find('.card.pure-1-6'):
                 try:
                     manga = Manga(title_english=PyQuery(entry).find('h4').text(),
-                                  urls={DataSource.ANIMEPLANET: BASE_URL + PyQuery(entry).find('a').attr('href')})
+                                  url=BASE_URL + PyQuery(entry).find('a').attr('href'))
 
                     if '<li>Light Novel</li>' not in PyQuery(entry).find('a').attr('title'):
                         manga_list.append(manga)
@@ -95,9 +102,9 @@ class AnimePlanet:
         else:
             try:
                 manga = Manga(title_english=results.find('h1[itemprop="name"]').text(),
-                              urls={DataSource.ANIMEPLANET: results.find("meta[property='og:url']").attr('content')})
+                              url=results.find("meta[property='og:url']").attr('content'))
 
-                if not results.find('a[href="/manga/tags/light-novel"]') and 'anime' not in [url for url in manga.urls.items()]:
+                if not results.find('a[href="/manga/tags/light-novel"]') and '/anime/' not in manga.url:
                     manga_list.append(manga)
             except AttributeError:
                 pass  # todo - logging here
@@ -113,8 +120,7 @@ class AnimePlanet:
             for entry in results.find('.card.pure-1-6'):
                 try:
                     ln = LightNovel(title_english=PyQuery(entry).find('h4').text(),
-                                    urls={DataSource.ANIMEPLANET: BASE_URL + PyQuery(entry).find('a').attr('href')},
-                                    type=Type.LIGHT_NOVEL,
+                                    url=BASE_URL + PyQuery(entry).find('a').attr('href'),
                                     synonyms={PyQuery(entry).find('a').text().replace('(Light Novel)', '').rstrip()})
 
                     if '<li>Light Novel</li>' in PyQuery(entry).find('a').attr('title'):
@@ -125,11 +131,10 @@ class AnimePlanet:
             try:
 
                 ln = LightNovel(title_english=results.find('h1[itemprop="name"]').text(),
-                                urls={DataSource.ANIMEPLANET: results.find("meta[property='og:url']").attr('content')},
-                                type=Type.LIGHT_NOVEL,
+                                url=results.find("meta[property='og:url']").attr('content'),
                                 synonyms={results.find('h1[itemprop="name"]').text().replace('(Light Novel)', '').rstrip()})
 
-                if results.find('a[href="/manga/tags/light-novel"]') and 'anime' not in [url for url in ln.urls.items()]:
+                if results.find('a[href="/manga/tags/light-novel"]') and '/anime/' not in ln.url:
                     ln_list.append(ln)
             except AttributeError:
                 pass  # todo - logging here

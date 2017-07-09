@@ -2,7 +2,7 @@ class Anime:
     # todo abstract out titles?
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
-        self.urls = kwargs.get('urls')
+        self.url = kwargs.get('url')
 
         self.title_romaji = kwargs.get('title_romaji')
         self.title_english = kwargs.get('title_english')
@@ -27,7 +27,7 @@ class Anime:
 class Manga:
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
-        self.urls = kwargs.get('urls')
+        self.url = kwargs.get('url')
 
         self.title_romaji = kwargs.get('title_romaji')
         self.title_english = kwargs.get('title_english')
@@ -52,7 +52,7 @@ class Manga:
 class LightNovel:
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
-        self.urls = kwargs.get('urls')
+        self.url = kwargs.get('url')
 
         self.title_romaji = kwargs.get('title_romaji')
         self.title_english = kwargs.get('title_english')

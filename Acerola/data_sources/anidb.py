@@ -4,7 +4,8 @@ import logging
 from pyquery import PyQuery
 from typing import List, Dict
 
-from ..errors import ResponseException
+from ..errors import NoResultsFound, DataSourceTimeoutError, DataSourceUnavailableError, AcerolaError
+
 from ..response_types import Anime
 from ..enums import DataSource
 
@@ -12,40 +13,47 @@ BASE_URL = 'http://anisearch.outrance.pl/?task=search&query='
 
 
 class AniDB:
+    source_type = DataSource.ANIDB
+
     def __init__(self, config):
-        self.source_type = DataSource.ANIDB
-        self.timeout = config['Timeout']
+        self.timeout = int(config['Timeout'])
         self.logger = logging.getLogger('AcerolaLogger')
         self.session = requests.Session()
 
-    def search_anime(self, search_term) -> List[Anime]:
+    # todo logging decorator?
+    def anidb_search(self, search_term, parser):
         try:
-            result = self.session.get(BASE_URL + search_term, timeout=int(self.timeout))
+            response = self.session.get(BASE_URL + search_term, timeout=self.timeout)
+            response.raise_for_status()
 
-            if result.status_code != 200:
-                raise ResponseException('Failed to find results for: ' + search_term)
+            results = parser(PyQuery(response.content))
 
-            pq_results = PyQuery(result.content)
+            if not results:
+                raise NoResultsFound(AniDB.source_type, search_term)
 
-            parsed_results = AniDB.parse_anime(pq_results)
-
-            return parsed_results
-
+            return results
+        except NoResultsFound:
+            raise
+        except requests.exceptions.Timeout:
+            raise DataSourceTimeoutError(AniDB.source_type)
+        except requests.exceptions.RequestException:
+            raise DataSourceUnavailableError(AniDB.source_type)
         except Exception as e:
-            # todo log that shit
-            self.logger.error('AP error: ' + str(e))
-            return []
+            raise AcerolaError(e)
         finally:
             self.session.close()
 
+    def search_anime(self, search_term):
+        return self.anidb_search(search_term, self.parse_anime)
+
     @staticmethod
-    def parse_anime(results) -> List[Anime]:
+    def parse_anime(results):
         anime_list = []
 
         for anime in results('animetitles anime'):
             title_info = AniDB.process_titles(PyQuery(anime).find('title').items())
             anime_list.append(Anime(id=int(anime.attrib['aid']),
-                                    urls={DataSource.ANIDB: 'http://anidb.net/a' + anime.attrib['aid']},
+                                    url='http://anidb.net/a' + anime.attrib['aid'],
                                     title_english=next((title['title'] for title in title_info if title['lang'] == 'en' and title['type'] in ['main', 'official']), None),
                                     title_romaji=next((title['title'] for title in title_info if title['lang'] == 'x-jat' and title['type'] in ['main', 'official']), None),
                                     title_japanese=next((title['title'] for title in title_info if title['lang'] == 'ja' and title['type'] in ['main', 'official']), None),
@@ -54,7 +62,7 @@ class AniDB:
         return anime_list
 
     @staticmethod
-    def process_titles(title_items) -> List[Dict]:
+    def process_titles(title_items):
         titles = []
         for title in title_items:
             title_info = {'title': title.text(), 'lang': title.attr['lang'], 'type': title.attr['type']}

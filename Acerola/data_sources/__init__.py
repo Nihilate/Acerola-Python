@@ -4,3 +4,5 @@ from .kitsu import Kitsu
 from .animeplanet import AnimePlanet
 from .anidb import AniDB
 from .mangaupdates import MangaUpdates
+
+# todo - novel updates, lndb, vndb

@@ -1,5 +1,4 @@
 from Acerola.enums import Type, Status, SeriesSource
-from difflib import get_close_matches
 
 
 def get_type(mapping, series_type):
@@ -24,3 +23,8 @@ def get_series_source(mapping, series_source):
             return enum_source
 
     return SeriesSource.UNKNOWN
+
+
+def clean_description(description):
+    # todo - this should remove branding from descriptions
+    return description

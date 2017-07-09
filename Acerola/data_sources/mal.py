@@ -1,7 +1,7 @@
 import xml.etree.cElementTree as et
 import logging
 
-from ..errors import XmlParseError, ResponseException
+from ..errors import ParserError, NoResultsFound
 from ..enums import Type, DataSource, Status
 from ..util import get_status, get_type
 
@@ -36,9 +36,10 @@ STATUS_MAPPING = (['Not yet aired', Status.UPCOMING],
 
 
 class Mal:
+    source_type = DataSource.MAL
+
     # todo better handling of errors inside "get items" call (include requests.timeout)
     def __init__(self, config):
-        self.source_type = DataSource.MAL
         self.config = config
 
         self.logger = logging.getLogger('AcerolaLogger')
@@ -53,7 +54,7 @@ class Mal:
             if result.status_code == 204:
                 return []
             elif result.status_code != 200:
-                raise ResponseException('Failed to find results for: ' + search_term)
+                raise NoResultsFound('Failed to find results for: ' + search_term)
 
             sanitised_result = self.sanitise_shitty_xml(result.text)
             parsed_results = parser(sanitised_result)
@@ -81,14 +82,14 @@ class Mal:
         try:
             entries = et.fromstring(xml)
         except et.ParseError:
-            raise XmlParseError('The XML is busted.')
+            raise ParserError('The XML is busted.')
 
         anime_list = []
 
         for entry in entries:
             try:
                 anime_list.append(Anime(id=int(entry.find('id').text),
-                                        urls={DataSource.MAL: 'http://myanimelist.net/anime/' + str(entry.find('id').text)},
+                                        url='http://myanimelist.net/anime/' + str(entry.find('id').text),
                                         title_english=entry.find('english').text,
                                         title_romaji=entry.find('title').text,
                                         synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),
@@ -108,17 +109,19 @@ class Mal:
 
     @staticmethod
     def parse_manga(xml):
+        source = Mal.source_type
+
         try:
             entries = et.fromstring(xml)
         except et.ParseError:
-            raise XmlParseError('The XML is busted.')
+            raise ParserError('The XML is busted.')
 
         manga_list = []
 
         for entry in entries:
             try:
                 manga = Manga(id=entry.find('id').text,
-                              urls={DataSource.MAL: 'http://myanimelist.net/manga/' + str(entry.find('id').text)},
+                              url='http://myanimelist.net/manga/' + str(entry.find('id').text),
                               title_english=entry.find('english').text,
                               title_romaji=entry.find('title').text,
                               synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),
@@ -144,14 +147,14 @@ class Mal:
         try:
             entries = et.fromstring(xml)
         except et.ParseError:
-            raise XmlParseError('The XML is busted.')
+            raise ParserError('The XML is busted.')
 
         ln_list = []
 
         for entry in entries:
             try:
                 ln = LightNovel(id=entry.find('id').text,
-                                urls={DataSource.MAL: 'http://myanimelist.net/manga/' + str(entry.find('id').text)},
+                                url='http://myanimelist.net/manga/' + str(entry.find('id').text),
                                 title_english=entry.find('english').text,
                                 title_romaji=entry.find('title').text,
                                 synonyms=set(entry.find('synonyms').text.split(";")) if entry.find('synonyms').text else set(),

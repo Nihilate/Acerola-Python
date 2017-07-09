@@ -1,3 +1,5 @@
+from.errors import InvalidDataSourceForSeriesTypeError, FeatureNotImplementedError
+
 class Searcher:
     def __init__(self, type_searcher):
         self._type_searcher = type_searcher
@@ -13,21 +15,24 @@ class AnimeSearcher:
     def __init__(self, *sources):
         self._sources = {source.source_type: source for source in sources}
 
+    # todo - the exception handling for these classes is too general
     def search(self, source_type, term):
-        try:
-            return self._sources[source_type].search_anime(term)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid anime source.')
-        except AttributeError:
-            raise NotImplementedError('anime.search() is not implemented for ' + str(source_type))
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
 
-    def get(self, source_type, term):
-        try:
-            return self._sources[source_type].get_anime(term)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid anime source.')
-        except AttributeError:
-            raise NotImplementedError('anime.get() is not implemented for ' + str(source_type))
+        if 'search_anime' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'search_anime')
+
+        return self._sources[source_type].search_anime(term)
+
+    def get(self, source_type, id):
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
+
+        if 'get_anime' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'get_anime')
+
+        return self._sources[source_type].get_anime(id)
 
 
 class MangaSearcher:
@@ -35,20 +40,22 @@ class MangaSearcher:
         self._sources = {source.source_type: source for source in sources}
 
     def search(self, source_type, term):
-        try:
-            return self._sources[source_type].search_manga(term)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid manga source.')
-        except AttributeError:
-            raise NotImplementedError('manga.search() is not implemented for ' + str(source_type))
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
+
+        if 'search_manga' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'search_manga')
+
+        return self._sources[source_type].search_manga(term)
 
     def get(self, source_type, id):
-        try:
-            return self._sources[source_type].get_manga(id)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid manga source.')
-        except AttributeError:
-            raise NotImplementedError('manga.get() is not implemented for ' + str(source_type))
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
+
+        if 'get_manga' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'get_manga')
+
+        return self._sources[source_type].get_manga(id)
 
 
 class LightNovelSearcher:
@@ -56,17 +63,19 @@ class LightNovelSearcher:
         self._sources = {source.source_type: source for source in sources}
 
     def search(self, source_type, term):
-        try:
-            return self._sources[source_type].search_light_novel(term)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid light novel source.')
-        except AttributeError:
-            raise NotImplementedError('light_novel.search() is not implemented for ' + str(source_type))
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
+
+        if 'search_light_novel' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'search_light_novel')
+
+        return self._sources[source_type].search_light_novel(term)
 
     def get(self, source_type, id):
-        try:
-            return self._sources[source_type].get_light_novel(id)
-        except KeyError:
-            raise ValueError(str(source_type) + ' is not a valid light novel source.')
-        except AttributeError:
-            raise NotImplementedError('light_novel.get() is not implemented for ' + str(source_type))
+        if source_type not in self._sources:
+            raise InvalidDataSourceForSeriesTypeError(source_type)
+
+        if 'get_light_novel' not in dir(self._sources[source_type]):
+            raise FeatureNotImplementedError(source_type, 'get_light_novel')
+
+        return self._sources[source_type].get_light_novel(id)

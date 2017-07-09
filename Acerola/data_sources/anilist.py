@@ -1,15 +1,15 @@
 import requests
-from retrying import retry
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 import logging
 
-from ..errors import AccessTokenExpiredException, ResponseException
+from ..errors import NoResultsFound, DataSourceTimeoutError, DataSourceUnavailableError, AccessTokenExpiredError, AcerolaError
 from ..enums import Type, Status, DataSource, SeriesSource
 from ..util import get_status, get_type, get_series_source
 
 from ..response_types import Anime, Manga, LightNovel
 
 AUTH_URL = 'https://anilist.co/api/auth/access_token'
-BASE_API = 'https://anilist.co/api/'
+BASE_URL = 'https://anilist.co/api/'
 ANIME_ENDPOINT = 'anime/search/'
 MANGA_ENDPOINT = 'manga/search/'
 
@@ -43,16 +43,13 @@ SERIES_SOURCE_MAPPING = (['Original', SeriesSource.ORIGINAL],
                          ['Other', SeriesSource.OTHER])
 
 
-def retry_if_access_token_needs_refreshing(exception):
-    return isinstance(exception, AccessTokenExpiredException)
-
-
 class Anilist:
+    source_type = DataSource.ANILIST
+
     def __init__(self, config):
-        self.source_type = DataSource.ANILIST
         self.client_id = config['ClientId']
         self.client_secret = config['ClientSecret']
-        self.timeout = config['Timeout']
+        self.timeout = int(config['Timeout'])
 
         self.logger = logging.getLogger('AcerolaLogger')
 
@@ -60,55 +57,69 @@ class Anilist:
         self.access_token = None
 
     def refresh_access_token(self):
-        token_result = self.session.post(AUTH_URL,
-                                         params={'grant_type': 'client_credentials',
-                                                 'client_id': self.client_id,
-                                                 'client_secret': self.client_secret},
-                                         timeout=int(self.timeout))
-        self.access_token = token_result.json()['access_token']
-
-    @retry(retry_on_exception=retry_if_access_token_needs_refreshing, stop_max_attempt_number=2)
-    def search_items(self, search_term, endpoint, parser):
         try:
-            sanitised_search_term = self.sanitise_search_term(search_term)
+            response = self.session.post(AUTH_URL, params={'grant_type': 'client_credentials', 'client_id': self.client_id, 'client_secret': self.client_secret}, timeout=int(self.timeout))
 
-            result = self.session.get(BASE_API + endpoint + sanitised_search_term,
-                                      params={'access_token': self.access_token},
-                                      timeout=int(self.timeout))
+            response.raise_for_status()
 
-            if result.status_code == 401:
-                raise AccessTokenExpiredException
-            elif result.status_code != 200:
-                raise ResponseException
+            self.access_token = response.json()['access_token']
+        except requests.exceptions.Timeout:
+            raise DataSourceTimeoutError(Anilist.source_type)
+        except requests.exceptions.RequestException:
+            raise DataSourceUnavailableError(Anilist.source_type)
+        except Exception as e:
+            raise AcerolaError(e)
+        finally:
+            self.session.close()
 
-            json_results = result.json()
+    # todo logging decorator?
+    @retry(retry=retry_if_exception_type(AccessTokenExpiredError), stop=stop_after_attempt(2))
+    def anilist_search(self, endpoint, search_term, parser):
+        try:
+            search_term = self.sanitise_search_term(search_term)
+            response = self.session.get(BASE_URL + endpoint + search_term, params={'access_token': self.access_token}, timeout=self.timeout)
+
+            if response.status_code == 401:
+                raise AccessTokenExpiredError(Anilist.source_type)
+
+            response.raise_for_status()
 
             try:
-                if 'No Results.' in json_results["error"]["messages"]:
-                    raise ResponseException('Failed to find results for: ' + search_term)
+                error_message = response.json()['error']['messages']
             except TypeError:
-                pass
+                error_message = None
 
-            parsed_results = parser(json_results)
+            if error_message and 'No Results.' in error_message:
+                raise NoResultsFound(Anilist.source_type, search_term)
 
-            return parsed_results
-        except AccessTokenExpiredException:
+            results = parser(response.json())
+
+            if not results:
+                raise NoResultsFound(Anilist.source_type, search_term)
+
+            return results
+        except NoResultsFound:
+            raise
+        except AccessTokenExpiredError:
             self.refresh_access_token()
             raise
+        except requests.exceptions.Timeout:
+            raise DataSourceTimeoutError(Anilist.source_type)
+        except requests.exceptions.RequestException:
+            raise DataSourceUnavailableError(Anilist.source_type)
         except Exception as e:
-            self.logger.error('ANI error: ' + str(e))
-            return []
+            raise AcerolaError(e)
         finally:
             self.session.close()
 
     def search_anime(self, search_term):
-        return self.get_items(search_term, ANIME_ENDPOINT, self.parse_anime)
+        return self.anilist_search(ANIME_ENDPOINT, search_term, self.parse_anime)
 
     def search_manga(self, search_term):
-        return self.get_items(search_term, MANGA_ENDPOINT, self.parse_manga)
+        return self.anilist_search(MANGA_ENDPOINT, search_term, self.parse_manga)
 
     def search_light_novel(self, search_term):
-        return self.get_items(search_term, MANGA_ENDPOINT, self.parse_light_novel)
+        return self.anilist_search(MANGA_ENDPOINT, search_term, self.parse_light_novel)
 
     @staticmethod
     def parse_anime(results):
@@ -117,7 +128,7 @@ class Anilist:
         for entry in results:
             try:
                 anime_list.append(Anime(id=entry['id'],
-                                        urls={DataSource.ANILIST: 'https://anilist.co/anime/' + str(entry['id'])},
+                                        url='https://anilist.co/anime/' + str(entry['id']),
                                         title_romaji=entry['title_romaji'],
                                         title_english=entry['title_english'],
                                         title_japanese=entry['title_japanese'],
@@ -141,7 +152,7 @@ class Anilist:
         for entry in results:
             try:
                 manga = Manga(id=entry['id'],
-                              urls={DataSource.ANILIST: 'https://anilist.co/anime/' + str(entry['id'])},
+                              url='https://anilist.co/anime/' + str(entry['id']),
                               title_romaji=entry['title_romaji'],
                               title_english=entry['title_english'],
                               title_japanese=entry['title_japanese'],
@@ -168,7 +179,7 @@ class Anilist:
         for entry in results:
             try:
                 ln = LightNovel(id=entry['id'],
-                                urls={DataSource.ANILIST: 'https://anilist.co/anime/' + str(entry['id'])},
+                                url='https://anilist.co/anime/' + str(entry['id']),
                                 title_romaji=entry['title_romaji'],
                                 title_english=entry['title_english'],
                                 title_japanese=entry['title_japanese'],
@@ -191,10 +202,3 @@ class Anilist:
     @staticmethod
     def sanitise_search_term(text):
         return text.replace('/', ' ')
-        '''replacements = (["/", " "],
-                        ["&", " "])
-
-        for character, replacement in replacements:
-            text = text.replace(character, replacement)
-
-        return text'''

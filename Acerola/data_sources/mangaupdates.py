@@ -4,7 +4,7 @@ import logging
 from pyquery import PyQuery
 from typing import List
 
-from ..errors import ResponseException
+from ..errors import NoResultsFound
 from ..response_types import Manga, LightNovel
 from ..enums import DataSource
 
@@ -25,7 +25,7 @@ class MangaUpdates:
                                       timeout=int(self.timeout))
 
             if result.status_code != 200:
-                raise ResponseException('Failed to find results for: ' + search_term) # this error message is shit
+                raise NoResultsFound('Failed to find results for: ' + search_term) # this error message is shit
 
             parsed_results = parser(PyQuery(result.content))
 
@@ -51,7 +51,7 @@ class MangaUpdates:
 
         for thing in results.find('.series_rows_table tr'):
             manga_list.append(Manga(title_english=PyQuery(thing).find('.col1').text(),
-                                    urls={DataSource.MANGAUPDATES: PyQuery(thing).find('.col1 a').attr('href')}))
+                                    url=PyQuery(thing).find('.col1 a').attr('href')))
 
         return manga_list
 
@@ -61,6 +61,6 @@ class MangaUpdates:
 
         for thing in results.find('.series_rows_table tr'):
             ln_list.append(LightNovel(title_english=PyQuery(thing).find('.col1').text(),
-                                      urls={DataSource.MANGAUPDATES: PyQuery(thing).find('.col1 a').attr('href')}))
+                                      url=PyQuery(thing).find('.col1 a').attr('href')))
 
         return ln_list
