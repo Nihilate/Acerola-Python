@@ -23,3 +23,6 @@ class Acerola:
         self.anime = Searcher(AnimeSearcher(self._mal, self._anilist, self._kitsu, self._animeplanet, self._anidb))
         self.manga = Searcher(MangaSearcher(self._mal, self._anilist, self._kitsu, self._animeplanet, self._mu))
         self.light_novel = Searcher(LightNovelSearcher(self._mal, self._anilist, self._kitsu, self._animeplanet, self._mu))
+
+    def refresh_anidb_database(self):
+        self._anidb.refresh_database()

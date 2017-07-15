@@ -1,5 +1,6 @@
 from.errors import InvalidDataSourceForSeriesTypeError, FeatureNotImplementedError
 
+
 class Searcher:
     def __init__(self, type_searcher):
         self._type_searcher = type_searcher

@@ -1,6 +1,7 @@
 # todo - make this class actually useful
 # todo - add error for data sources not being configured correctly
 # todo - add error for a data source being unavailable (down or timing out)
+# todo - add error for more than one result from a get
 
 
 class AcerolaError(Exception):
